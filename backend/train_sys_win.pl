@@ -2265,12 +2265,17 @@ fastest_path(From, To, Path, Length, Fare,Interchange) :-
 %Sort a list by the best path => 
 %(check time first then if the one which is slower is cheaper than another for 20%
 compare_by_all(Order, [_, Distance1, Fare1 ,Interchange1], [_, Distance2, Fare2,Interchange2]) :-
-    (   (Distance1 + Interchange1) < (Distance2 + Interchange2) -> % no 2
-    		(   Fare1 * 0.8 < Fare2 ->  Order = '<'
-            ;   Order = '>')
-    ;   (Distance1 + Interchange1) > (Distance2 + Interchange2) -> % no 1
-			(   Fare1  >  Fare2 * 0.8 ->  Order = '>'
-            ;   Order = '<')
+    X1 is Distance1 + Interchange1, X2 is Distance2 + Interchange2,
+    (   X1 < X2 -> % 2 use more time
+    	( 	X1 + 3 < X2 ->  Order = '<'
+        ;   (   Fare1 * 0.8 < Fare2 ->  Order = '<'
+            ;   Order = '>'))
+ 
+    ;   X1 > X2 -> % 1 use more time
+    	( 	X1 + 3 < X2 ->  Order = '<'
+        ;   (   Fare1  >  Fare2 * 0.8 ->  Order = '>'
+            ;   Order = '<'))
+    
     ;   (Fare1 > Fare2) 	-> Order = '>'
     ;   (Fare1 < Fare2) 	-> Order = '<'
     ;	Order = '='
