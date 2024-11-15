@@ -2193,14 +2193,6 @@ insert(compare_by_distance, X, [Y|Ys], [Y|Zs]) :-
     \+ compare_by_distance(<, X, Y),
     insert(compare_by_distance, X, Ys, Zs).
 
-% Insert based on compare_by_int (if sorting by interchange)
-insert(compare_by_int, X, [Y|Ys], [X, Y|Ys]) :-
-    compare_by_int(<, X, Y).  % Direct comparison using compare_by_int
-
-insert(compare_by_int, X, [Y|Ys], [Y|Zs]) :-
-    \+ compare_by_int(<, X, Y),
-    insert(compare_by_int, X, Ys, Zs).
-
 % Insert based on compare_by_time (if sorting by time)
 insert(compare_by_time, X, [Y|Ys], [X, Y|Ys]) :-
     compare_by_time(<, X, Y).  % Direct comparison using compare_by_time
