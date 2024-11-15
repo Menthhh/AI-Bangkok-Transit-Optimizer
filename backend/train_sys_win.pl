@@ -2110,21 +2110,24 @@ count_until(From, To, [_|Tail], Acc, Count) :-
 count_until(From, To, [], _, Count) :- count(To, From, Count).
 
 % path:  path(From,To, Visited, Path, Length, Fare, Interchange)
-path(From,To, Path, Length, Fare):- path(From,To,[], Path, Length, Fare).
+path(From,To, Path, Length, Fare, Interchange):- path(From,To,[], Path, Length, Fare, Interchange).
 
 		% same line
-path(From,To,_, [From,To], Length, Fare, 0):-
+path(From,To,Visited, [From,To], Length, Fare, 0):-
+    \+ same_set(Visited, [lightgreen,darkgreen,gold,blue,purple,yellow,pink,airport,red]),
 	train(From, X), train(To, X),!,
 	fare(From,To,Fare), count(From,To,Length).
 		% greens linkage
-path(From,To,_, X3, Length, Fare,1):-
+path(From,To,Visited, X3, Length, Fare,1):-
+    \+ same_set(Visited, [lightgreen,darkgreen,gold,blue,purple,yellow,pink,airport,red]),
 	train(From, lightgreen), train(To, darkgreen),!,
     X = [From],
     (From \= cen_lg ->  append(X,[cen_lg],X1); X1 = X),
     (To \= cen_dg ->  append(X1,[cen_dg],X2);X2 = X1),
     append(X2,[To],X3),
 	fare(From,To,Fare), count(From,To,Length).
-path(From,To, _,X3, Length, Fare, 1):-
+path(From,To, Visited,X3, Length, Fare, 1):-
+    \+ same_set(Visited, [lightgreen,darkgreen,gold,blue,purple,yellow,pink,airport,red]),
 	train(From, darkgreen), train(To, lightgreen),!,
     X = [From],
     (From \= cen_dg ->  append(X,[cen_dg],X1);X1 = X),
@@ -2133,38 +2136,95 @@ path(From,To, _,X3, Length, Fare, 1):-
 	fare(From,To,Fare), count(From,To,Length).
 
 		% with linkage
-path(From, To,_, L3, Length, Fare, 1):-
+path(From, To,Visited, L3, Length, Fare, 1):-
+    \+ same_set(Visited, [lightgreen,darkgreen,gold,blue,purple,yellow,pink,airport,red]),
 	train(From, X), train(To, Y),
 	(   (X == lightgreen -> Y \= darkgreen
 	 ;   X == darkgreen -> Y \= lightgreen)
     ;   true),
 	linkage(A,B), train(A,X), train(B,Y),
-    	L = [From],
-   	 (From \= A ->  append(L,[A],L1);L1 = L),
-    	(To \= B ->  append(L1,[B],L2);L2 = L1),
-    	append(L2,[To],L3),
-  	fare(From,A,F1), fare(B,To,F2), Fare is F1 + F2,
+    L = [From],
+   	 (From \= A ->  (append(L,[A],L1), fare(From,A,F1)); (L1 = L, F1 = 0)),
+    (To \= B ->  (append(L1,[B],L2) , fare(B,To,F2));(L2 = L1, F2 = 0)),
+    append(L2,[To],L3),
+    Fare is F1 + F2,
 	count(From,A,C1), count(B,To,C2), Length is C1+C2.
+
 		% no linkage: number station
 path(From,To,Visited,List,Length,Fare, Interchange):- 
-	train(From, X), train(To, Y),
-	(   (X == lightgreen -> Y \= darkgreen
-	 ;   X == darkgreen -> Y \= lightgreen)
+    \+ same_set(Visited, [lightgreen,darkgreen,gold,blue,purple,yellow,pink,airport,red]),
+	\+ check_same_train_and_visited(To, Visited),
+    train(From, X), train(To, Y),
+	(   	X == lightgreen -> Y \= darkgreen
+	 ;   	X == darkgreen -> Y \= lightgreen
     ;   true),
-	linkage(A,B), train(A,X), \+ train(B,Y), 
-    train(B,Z), \+ (train(C,Z), member(C,Visited)),
-    ((Z == lightgreen ->  \+ (train(C,darkgreen), member(C,Visited))
-      ;  Z == darkgreen ->  \+ (train(C,lightgreen), member(C,Visited)))
+	linkage(A,B), train(A,X), \+ train(B,Y), \+ member(A, [cen_dg,cen_lg]),
+    train(B,Z), \+ member(Z,Visited),
+    ((	Z == lightgreen ->  \+ member(darkgreen,Visited)
+      ;  Z == darkgreen ->  \+ member(lightgreen,Visited))
     ;   true),
     L = [From],
     (From \= A ->  append(L,[A],L1);L1 = L),
-    append(Visited,[From,A], Visited2),
+    append(Visited,[X], Visited2), 
+    
     path(B,To,Visited2,P,C,F,I), 
     append(L1,P,List),
     fare(From,A,F1), Fare is F1 + F,
     count(From,A,C1), Length is C + C1,
     Interchange is I + 1.
 
+path(From,To,Visited,List,Length,Fare,Interchange):-
+    \+ same_set(Visited, [lightgreen,darkgreen,gold,blue,purple,yellow,pink,airport,red]),
+    \+ check_same_train_and_visited(To, Visited),
+    train(From, X), train(To, Y),
+	(   	X == lightgreen -> Y \= darkgreen
+	 ;   	X == darkgreen -> Y \= lightgreen
+    ),
+	linkage(A,B), train(A,X), member(A, [cen_dg,cen_lg]),  \+ train(B,Y), 
+    append(Visited,[X], Visited2),
+    train(B,Z), \+ member(Z,Visited2),
+    linkage(C,D), D \= B, train(C,Z), train(D,W), \+ member(W,Visited2),
+    L = [From],
+    (From \= A ->  append(L,[A,B,C],L1);append(L,[B,C],L1)),
+    append(Visited2,[Z], Visited3),
+    
+    path(D,To,Visited3,P,C2,F,I),
+    append(L1,P,List),
+    count(From,C,C1), Length is C2 + C1,
+    fare(From,C,F1), Fare is F1 + F,
+    Interchange is I + 2
+.
+
+same_set(L1, L2) :-
+    sort(L1, Sorted1),
+    sort(L2, Sorted2),
+    Sorted1 = Sorted2.
+
+% Find elements sharing the same train as A
+elements_on_same_train(A, Elements) :-
+    train(A, Prop),                     % Find the property (train) of A
+    findall(E, (train(E, Prop), E \= A), Elements). % Find all elements sharing the train, excluding A.
+
+% Collect all X values linked to a given Y
+linked_set(Y, Xs) :-
+    findall(X, linkage(Y, X), Xs).
+
+% Check if all elements of a set are in the Visited list
+all_in_visited([], _). % Base case: An empty list is always a subset.
+all_in_visited([H|T], Visited) :-
+    member(H, Visited), % Check if the head is in the Visited list.
+    all_in_visited(T, Visited). % Recursively check the tail.
+
+% Main predicate: Input only A and return true/false
+check_same_train_and_visited(A, Visited) :-
+    elements_on_same_train(A, Elements), % Find all elements on the same train
+    forall(
+        member(Y, Elements),
+        (
+            linked_set(Y, Xs),          % Find all Xs linked to Y
+            all_in_visited(Xs, Visited) % Ensure all Xs are in Visited
+        )
+    ).
 
 % predsort/3: Sort a list based on a comparison predicate
 predsort(_, [], []).  % Base case: an empty list is already sorted
