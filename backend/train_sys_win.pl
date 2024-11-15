@@ -176,7 +176,7 @@ train(g2, gold).
 train(g3, gold).
 
 train_list([g1,g2,g3], gold).
-fare(X,Y,15) :- train(X,gold), train(Y,gold).
+fare(X,Y,16) :- train(X,gold), train(Y,gold).
 
 % blue: MRT
 train(bl01, blue).
@@ -2347,4 +2347,4 @@ best_path(From, To, Path, Length, Fare,Interchange) :-
     setof([P, L, F, I], path(From, To,[], P, L, F, I), Paths),
     % Sort the paths by length to find the shortest one
     sort_by_all(Paths, SortedPaths),
-    SortedPaths = [[Path, Length, Fare, Interchange]|_]. % Get the shortest path
+    SortedPaths = [[Path, Length, Fare, Interchange]|_]. 
