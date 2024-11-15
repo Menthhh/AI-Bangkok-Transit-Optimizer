@@ -2109,22 +2109,22 @@ count_until(From, To, [_|Tail], Acc, Count) :-
 	count_until(From, To, Tail, NewAcc, Count).
 count_until(From, To, [], _, Count) :- count(To, From, Count).
 
-% path:  path(From,To, Visited, [From,To], Length, Fare)
+% path:  path(From,To, Visited, Path, Length, Fare, Interchange)
 path(From,To, Path, Length, Fare):- path(From,To,[], Path, Length, Fare).
 
 		% same line
-path(From,To,_, [From,To], Length, Fare):-
+path(From,To,_, [From,To], Length, Fare, 0):-
 	train(From, X), train(To, X),!,
 	fare(From,To,Fare), count(From,To,Length).
 		% greens linkage
-path(From,To,_, X3, Length, Fare):-
+path(From,To,_, X3, Length, Fare,1):-
 	train(From, lightgreen), train(To, darkgreen),!,
     X = [From],
     (From \= cen_lg ->  append(X,[cen_lg],X1); X1 = X),
     (To \= cen_dg ->  append(X1,[cen_dg],X2);X2 = X1),
     append(X2,[To],X3),
 	fare(From,To,Fare), count(From,To,Length).
-path(From,To, _,X3, Length, Fare):-
+path(From,To, _,X3, Length, Fare, 1):-
 	train(From, darkgreen), train(To, lightgreen),!,
     X = [From],
     (From \= cen_dg ->  append(X,[cen_dg],X1);X1 = X),
@@ -2133,7 +2133,7 @@ path(From,To, _,X3, Length, Fare):-
 	fare(From,To,Fare), count(From,To,Length).
 
 		% with linkage
-path(From, To,_, L3, Length, Fare):-
+path(From, To,_, L3, Length, Fare, 1):-
 	train(From, X), train(To, Y),
 	(   (X == lightgreen -> Y \= darkgreen
 	 ;   X == darkgreen -> Y \= lightgreen)
@@ -2146,7 +2146,7 @@ path(From, To,_, L3, Length, Fare):-
   	fare(From,A,F1), fare(B,To,F2), Fare is F1 + F2,
 	count(From,A,C1), count(B,To,C2), Length is C1+C2.
 		% no linkage: number station
-path(From,To,Visited,List,Length,Fare):- 
+path(From,To,Visited,List,Length,Fare, Interchange):- 
 	train(From, X), train(To, Y),
 	(   (X == lightgreen -> Y \= darkgreen
 	 ;   X == darkgreen -> Y \= lightgreen)
@@ -2159,10 +2159,11 @@ path(From,To,Visited,List,Length,Fare):-
     L = [From],
     (From \= A ->  append(L,[A],L1);L1 = L),
     append(Visited,[From,A], Visited2),
-    path(B,To,Visited2,P,C,F), 
+    path(B,To,Visited2,P,C,F,I), 
     append(L1,P,List),
     fare(From,A,F1), Fare is F1 + F,
-    count(From,A,C1), Length is C + C1.
+    count(From,A,C1), Length is C + C1,
+    Interchange is I + 1.
 
 
 % predsort/3: Sort a list based on a comparison predicate
@@ -2192,38 +2193,94 @@ insert(compare_by_distance, X, [Y|Ys], [Y|Zs]) :-
     \+ compare_by_distance(<, X, Y),
     insert(compare_by_distance, X, Ys, Zs).
 
+% Insert based on compare_by_int (if sorting by interchange)
+insert(compare_by_int, X, [Y|Ys], [X, Y|Ys]) :-
+    compare_by_int(<, X, Y).  % Direct comparison using compare_by_int
+
+insert(compare_by_int, X, [Y|Ys], [Y|Zs]) :-
+    \+ compare_by_int(<, X, Y),
+    insert(compare_by_int, X, Ys, Zs).
+
+% Insert based on compare_by_time (if sorting by time)
+insert(compare_by_time, X, [Y|Ys], [X, Y|Ys]) :-
+    compare_by_time(<, X, Y).  % Direct comparison using compare_by_time
+
+insert(compare_by_time, X, [Y|Ys], [Y|Zs]) :-
+    \+ compare_by_time(<, X, Y),
+    insert(compare_by_time, X, Ys, Zs).
+
+% Insert based on compare_by_all (if sorting by all)
+insert(compare_by_all, X, [Y|Ys], [X, Y|Ys]) :-
+    compare_by_all(<, X, Y).  % Direct comparison using compare_by_all
+
+insert(compare_by_all, X, [Y|Ys], [Y|Zs]) :-
+    \+ compare_by_all(<, X, Y),
+    insert(compare_by_all, X, Ys, Zs).
+
 		% choose path
-compare_by_fare(Order, [_, _, Fare1], [_, _, Fare2]) :-
+% Sort a list by fare
+compare_by_fare(Order, [_, _, Fare1,_], [_, _, Fare2,_]) :-
     (   Fare1 < Fare2 -> Order = '<'
     ;   Fare1 > Fare2 -> Order = '>'
     ;   Order = '='
     ).
-
-% Sort a list by fare
 sort_by_fare(List, SortedList) :-
     predsort(compare_by_fare, List, SortedList).
 
-cheapest_path(From, To, Path, Length, Fare) :-
-    setof([P, L, F], path(From, To,[], P, L, F), Paths),
+cheapest_path(From, To, Path, Length, Fare,Interchange) :-
+    setof([P, L, F, I], path(From, To,[], P, L, F, I), Paths),
     % Sort the paths by fare to find the one with the lowest fare
     sort_by_fare(Paths, SortedPaths),
     %writeln(SortedPaths),
-    SortedPaths = [[Path, Length, Fare]|_]. % Get the path with the lowest fare
+    SortedPaths = [[Path, Length, Fare, Interchange]|_]. % Get the path with the lowest fare
 
-compare_by_distance(Order, [_, Distance1, _], [_, Distance2, _]) :-
+% Sort a list by distance
+compare_by_distance(Order, [_, Distance1, _,_], [_, Distance2, _,_]) :-
     (   Distance1 < Distance2 -> Order = '<'
     ;   Distance1 > Distance2 -> Order = '>'
     ;   Order = '='
     ).
-
-% Sort a list by distance
 sort_by_distance(List, SortedList) :-
     predsort(compare_by_distance, List, SortedList).
 
-shortest_path(From, To, Path, Length, Fare) :-
-    setof([P, L, F], path(From, To,[], P, L, F), Paths),
+shortest_path(From, To, Path, Length, Fare,Interchange) :-
+    setof([P, L, F, I], path(From, To,[], P, L, F, I), Paths),
     % Sort the paths by length to find the shortest one
     sort_by_distance(Paths, SortedPaths),
-    SortedPaths = [[Path, Length, Fare]|_]. % Get the shortest path
-	
+    SortedPaths = [[Path, Length, Fare, Interchange]|_]. % Get the shortest path
+
+% Sort a list by distance + interchange => fastest time
+compare_by_time(Order, [_, Distance1, _,Interchange1], [_, Distance2, _,Interchange2]) :-
+    (   (Distance1 + Interchange1) < (Distance2 + Interchange2) -> Order = '<'
+    ;   (Distance1 + Interchange1) > (Distance2 + Interchange2) -> Order = '>'
+    ;   Order = '='
+    ).
+sort_by_time(List, SortedList) :-
+    predsort(compare_by_time, List, SortedList).
+
+fastest_path(From, To, Path, Length, Fare,Interchange) :-
+    setof([P, L, F, I], path(From, To,[], P, L, F, I), Paths),
+    % Sort the paths by length to find the shortest one
+    sort_by_time(Paths, SortedPaths),
+    SortedPaths = [[Path, Length, Fare, Interchange]|_]. % Get the shortest path
+
+%Sort a list by the best path => 
+%(check time first then if the one which is slower is cheaper than another for 20%
+compare_by_all(Order, [_, Distance1, Fare1 ,Interchange1], [_, Distance2, Fare2,Interchange2]) :-
+    (   (Distance1 + Interchange1) < (Distance2 + Interchange2) -> % no 2
+    		(   Fare1 * 0.8 < Fare2 ->  Order = '<'
+            ;   Order = '>')
+    ;   (Distance1 + Interchange1) > (Distance2 + Interchange2) -> % no 1
+			(   Fare1  >  Fare2 * 0.8 ->  Order = '>'
+            ;   Order = '<')
+    ;   Order = '='
+    ).
+sort_by_all(List, SortedList) :-
+    predsort(compare_by_all, List, SortedList).
+
+best_path(From, To, Path, Length, Fare,Interchange) :-
+    setof([P, L, F, I], path(From, To,[], P, L, F, I), Paths),
+    % Sort the paths by length to find the shortest one
+    sort_by_all(Paths, SortedPaths),
+    SortedPaths = [[Path, Length, Fare, Interchange]|_]. % Get the shortest path
 
