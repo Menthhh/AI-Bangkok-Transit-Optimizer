@@ -151,6 +151,24 @@ class TransitOptimizerApp:
             radio_button.pack(anchor="w", padx=20)
 
     def update_dropdown(self, selected_line, stations, parent, point_type):
+        
+        if self.selected_line_var.get() == "BTS": 
+            if hasattr(self, 'dropdown_color_select') and self.dropdown_color_select is not None:
+                self.dropdown_color_select.destroy()
+            options = ["Light Green", "Dark Green", "Gold"]
+            self.dropdown_color_var = tk.StringVar(value='Select Line Color')
+            self.dropdown_color_select = OptionMenu(parent, self.dropdown_color_var, *options)
+            self.dropdown_color_select.pack(anchor="w", padx=20)
+        elif self.selected_line_var.get() == "MRT":
+            if hasattr(self, 'dropdown_color_select') and self.dropdown_color_select is not None:
+                self.dropdown_color_select.destroy()
+            options = ["Blue", 'Purple', 'Yellow', 'Pink']
+            self.dropdown_color_var = tk.StringVar(value='Select Line Color')
+            self.dropdown_color_select = OptionMenu(parent, self.dropdown_color_var, *options)
+            self.dropdown_color_select.pack(anchor="w", padx=20)
+        else:
+            if hasattr(self, 'dropdown_color_select') and self.dropdown_color_select is not None:
+                self.dropdown_color_select.destroy()
         if point_type == "start":
             if hasattr(self, 'dropdown_menu_start') and self.dropdown_menu_start is not None:
                 self.dropdown_menu_start.destroy()
