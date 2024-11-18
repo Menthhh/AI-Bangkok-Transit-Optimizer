@@ -235,3 +235,67 @@ class LookUpTable:
         @return: the name of the station
         '''
         return self.getReverseLookUpTable()[name]
+    
+    def get_lightgreen_stations(self) -> dict[str: str]:
+        return {k : v for k, v in self.lookUpTable.items() if k.startswith("n") or k.startswith("cen_lg") or k.startswith("e")}
+    
+    def get_darkgreen_stations(self) -> dict[str: str]:
+        return {k : v for k, v in self.lookUpTable.items() if k.startswith("w") or k.startswith("cen_dg") or k.startswith("s")}
+    
+    def get_gold_stations(self) -> dict[str: str]:
+        return {k : v for k, v in self.lookUpTable.items() if k.startswith("g")}
+    
+    def get_blue_stations(self) -> dict[str: str]:
+        return {k : v for k, v in self.lookUpTable.items() if k.startswith("bl")}
+    
+    def get_purple_stations(self) -> dict[str: str]:
+        return {k : v for k, v in self.lookUpTable.items() if k.startswith("pp")}
+    
+    def get_yellow_stations(self) -> dict[str: str]:
+        return {k : v for k, v in self.lookUpTable.items() if k.startswith("yl")}
+    
+    def get_pink_stations(self) -> dict[str: str]:
+        return {k : v for k, v in self.lookUpTable.items() if k.startswith("pk") or k.startswith("mt")}
+    
+    def get_airport_stations(self) -> dict[str: str]:
+        return {k : v for k, v in self.lookUpTable.items() if k.startswith("a")}
+    
+    def get_darkred_stations(self) -> dict[str: str]:
+        return {k : v for k, v in self.lookUpTable.items() if k.startswith("rn")}
+    
+    def get_lightred_stations(self) -> dict[str: str]:
+        return {k : v for k, v in self.lookUpTable.items() if k.startswith("rw")}
+    
+    def get_line_from_code(self, code: str) -> str:
+        if code.startswith("n") or code.startswith("cen_lg") or code.startswith("e"):
+            return "Light Green"
+        elif code.startswith("w") or code.startswith("cen_dg") or code.startswith("s"):
+            return "Dark Green"
+        elif code.startswith("g"):
+            return "Gold"
+        elif code.startswith("bl"):
+            return "Blue"
+        elif code.startswith("pp"):
+            return "Purple"
+        elif code.startswith("yl"):
+            return "Yellow"
+        elif code.startswith("pk") or code.startswith("mt"):
+            return "Pink"
+        elif code.startswith("a"):
+            return "Airport Rail Link"
+        elif code.startswith("rn"):
+            return "Dark Red"
+        elif code.startswith("rw"):
+            return "Light Red"
+    
+    def check_interchange(self, path, index):
+        if index == 0:
+            return False
+        current = self.get_line_from_code(path[index])
+        previous = self.get_line_from_code(path[index - 1])
+        print(current, previous)
+
+        if current != previous:
+            return True
+        else:
+            return False

@@ -15,7 +15,7 @@ class PrologTrainQuery:
         '''
         function for querying from prolog, not to be used outside of class
 
-        @params query: query string
+        @param query: query string
         '''
         # Run the Prolog process
         process = subprocess.run(
@@ -37,17 +37,17 @@ class PrologTrainQuery:
         else:
             return None, None, None, None
     
-    def query_fastest_path(self, station1: str, station2: str) -> tuple[list, int, int, int]:
+    def query_fastest_path(self, station1: str, station2: str, bts_card: str, mrt_card: str) -> tuple[list, int, int, int]:
         '''
         returns the path, length, fare of the shortest path between 2 stations
 
         @param station1: code name of starting station
         @param station2: code name of goal station
 
-        @returns: returns path, length, fare (in tuple)
+        @return: returns path, length, fare (in tuple)
         @raise keyError: raises an exception if wrong station name
         '''
-        query_str = f"fastest_path({station1}, {station2}, Path, Length, Fare, Interchange), write(Path), write(' '), write(Length), write(' '), write(Fare), write(' '), write(Interchange), nl."
+        query_str = f"fastest_path({station1}, {station2}, Path, Length, Fare, Interchange, {bts_card}, {mrt_card}), write(Path), write(' '), write(Length), write(' '), write(Fare), write(' '), write(Interchange), nl."
 
         path, length, fare, interchange = self.__query(query_str)
 
@@ -56,17 +56,17 @@ class PrologTrainQuery:
         else:
             raise KeyError("wrong station names")
     
-    def query_cheapest_path(self, station1: str, station2: str) -> tuple[list, int, int, int]:
+    def query_cheapest_path(self, station1: str, station2: str, bts_card: str, mrt_card: str) -> tuple[list, int, int, int]:
         '''
         returns the path, length, fare of the cheapest path between 2 stations
 
         @param station1: code name of starting station
         @param station2: code name of goal station
 
-        @returns: returns path, length, fare (in tuple)
+        @return: returns path, length, fare (in tuple)
         @raise keyError: raises an exception if wrong station name
         '''
-        query_str = f"cheapest_path({station1}, {station2}, Path, Length, Fare, Interchange), write(Path), write(' '), write(Length), write(' '), write(Fare), write(' '), write(Interchange), nl."
+        query_str = f"cheapest_path({station1}, {station2}, Path, Length, Fare, Interchange, {bts_card}, {mrt_card}), write(Path), write(' '), write(Length), write(' '), write(Fare), write(' '), write(Interchange), nl."
 
         path, length, fare, interchange = self.__query(query_str)
 
@@ -75,19 +75,20 @@ class PrologTrainQuery:
         else:
             raise KeyError("wrong station names")
         
-    def query_best_path(self, station1: str, station2: str):
+    def query_best_path(self, station1: str, station2: str, bts_card: str, mrt_card: str):
         ### to be implemented
         '''
-        returns the path, length, fare of the cheapest path between 2 stations
+        returns the path, length, fare of the cheapest and shortest path between 2 stations
 
         @param station1: code name of starting station
         @param station2: code name of goal station
 
-        @returns: returns path, length, fare (in tuple)
+        @return: returns path, length, fare (in tuple)
         @raise keyError: raises an exception if wrong station name
         '''
-        query_str = f"best_path({station1}, {station2}, Path, Length, Fare, Interchange), write(Path), write(' '), write(Length), write(' '), write(Fare), write(' '), write(Interchange), nl."
+        query_str = f"best_path({station1}, {station2}, Path, Length, Fare, Interchange, {bts_card}, {mrt_card}), write(Path), write(' '), write(Length), write(' '), write(Fare), write(' '), write(Interchange), nl."
 
+        
         path, length, fare, interchange = self.__query(query_str)
 
         if path:

@@ -1,6 +1,14 @@
+import sys
+import os
+
+# Add the project root to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import tkinter as tk
 from tkinter import Canvas, OptionMenu, StringVar, Toplevel, messagebox, Radiobutton, Label, Frame
 from PIL import Image, ImageTk
+from kernel.LookUpTable import LookUpTable
+from kernel.PrologTrainQuery import PrologTrainQuery    
 
 class TransitOptimizerApp:
     def __init__(self, root):
@@ -8,6 +16,9 @@ class TransitOptimizerApp:
         self.root.title("Bangkok Transit Optimizer")
         self.root.geometry("850x650")
         self.root.configure(bg="#ffffff")  # Set background color for the main window
+        self.lookUpTable = LookUpTable()
+        self.prologTrainQuery = PrologTrainQuery() 
+        self.prologTrainQuery.set_consult_file("./backend/train_sys_win_age.pl")
 
         # Menu bar
         menu_bar = tk.Menu(root)
@@ -92,8 +103,8 @@ class TransitOptimizerApp:
         # Variables for selected stations
         self.start_point = None
         self.destination_point = None
-        self.dropdown_var_start = StringVar()
-        self.dropdown_var_destination = StringVar()
+        self.dropdown_var_start = StringVar(value="Select Station")
+        self.dropdown_var_destination = StringVar(value="Select Station")
 
         # Initialize choice variable for route calculation
         self.choice_var = tk.StringVar(value="least_cost")  # Default choice
@@ -127,10 +138,10 @@ class TransitOptimizerApp:
 
         # Transit Lines with mutual exclusion using Radiobuttons
         lines = {
-            "BTS": ["Station 1", "Station 2", "Station 3"],
-            "MRT": ["Station A", "Station B", "Station C"],
-            "Airport Rail Link": ["Station X", "Station Y", "Station Z"],
-            "Red Line": ["Station R1", "Station R2", "Station R3"]
+            "BTS": [],
+            "MRT": [],
+            "Airport Rail Link": self.lookUpTable.get_airport_stations().values(),
+            "Red Line": []
         }
 
         self.selected_line_var = tk.StringVar()
@@ -150,49 +161,83 @@ class TransitOptimizerApp:
             )
             radio_button.pack(anchor="w", padx=20)
 
-    def update_dropdown(self, selected_line, stations, parent, point_type):
-        
-        if self.selected_line_var.get() == "BTS": 
+    def update_dropdown(self, line, stations, parent, point_type):
+        # Define stations for each color
+        color_to_stations = {
+            "Light Green": self.lookUpTable.get_lightgreen_stations().values(),
+            "Dark Green": self.lookUpTable.get_darkgreen_stations().values(),
+            "Gold": self.lookUpTable.get_gold_stations().values(),
+            "Blue": self.lookUpTable.get_blue_stations().values(),
+            "Purple": self.lookUpTable.get_purple_stations().values(),
+            "Yellow": self.lookUpTable.get_yellow_stations().values(),
+            "Pink": self.lookUpTable.get_pink_stations().values(),
+            "Dark Red": self.lookUpTable.get_darkred_stations().values(),
+            "Light Red": self.lookUpTable.get_lightred_stations().values(),
+        }
+
+        # If a color dropdown is needed
+        if line in ["BTS", "MRT", "Red Line"]:
             if hasattr(self, 'dropdown_color_select') and self.dropdown_color_select is not None:
                 self.dropdown_color_select.destroy()
-            options = ["Light Green", "Dark Green", "Gold"]
-            self.dropdown_color_var = tk.StringVar(value='Select Line Color')
-            self.dropdown_color_select = OptionMenu(parent, self.dropdown_color_var, *options)
-            self.dropdown_color_select.pack(anchor="w", padx=20)
-        elif self.selected_line_var.get() == "MRT":
-            if hasattr(self, 'dropdown_color_select') and self.dropdown_color_select is not None:
-                self.dropdown_color_select.destroy()
-            options = ["Blue", 'Purple', 'Yellow', 'Pink']
-            self.dropdown_color_var = tk.StringVar(value='Select Line Color')
-            self.dropdown_color_select = OptionMenu(parent, self.dropdown_color_var, *options)
+            
+            if line == "BTS":
+                options = ["Light Green", "Dark Green", "Gold"]
+            elif line == "MRT":
+                options = ["Blue", "Purple", "Yellow", "Pink"]
+            elif line == "Red Line":
+                options = ["Dark Red", "Light Red"]
+            
+            self.dropdown_color_var = tk.StringVar(value="Select Line Color")
+            self.dropdown_color_select = OptionMenu(
+                parent, 
+                self.dropdown_color_var, 
+                *options,
+                command=lambda _: self.update_stations_based_on_color(color_to_stations, parent, point_type)
+            )
             self.dropdown_color_select.pack(anchor="w", padx=20)
         else:
             if hasattr(self, 'dropdown_color_select') and self.dropdown_color_select is not None:
                 self.dropdown_color_select.destroy()
+
+        # Initially update the station dropdown
+        self.update_station_dropdown(parent, point_type, stations)
+
+    def update_stations_based_on_color(self, color_to_stations, parent, point_type):
+        selected_color = self.dropdown_color_var.get()
+        if selected_color in color_to_stations:
+            stations = color_to_stations[selected_color]
+            self.update_station_dropdown(parent, point_type, stations)
+
+    def update_station_dropdown(self, parent, point_type, stations):
         if point_type == "start":
             if hasattr(self, 'dropdown_menu_start') and self.dropdown_menu_start is not None:
                 self.dropdown_menu_start.destroy()
+            if not stations:
+                return
             self.dropdown_var_start.set("Select Station")
             self.dropdown_menu_start = OptionMenu(parent, self.dropdown_var_start, *stations)
             self.dropdown_menu_start.config(bg="#e0e0e0", font=("Arial", 10), width=20)
-            self.dropdown_menu_start.pack(anchor="w", padx=20)
+            self.dropdown_menu_start.pack(anchor="sw", padx=20)
             self.start_point = self.dropdown_var_start
             self.dropdown_var_start.trace("w", lambda *args: self.selected_start_label.config(
-                text=f"Start Point: {selected_line} - {self.dropdown_var_start.get()}"
+                text=f"Start Point: {self.selected_line_var.get()} - {self.dropdown_var_start.get()}"
             ))
 
         elif point_type == "destination":
             if hasattr(self, 'dropdown_menu_destination') and self.dropdown_menu_destination is not None:
                 self.dropdown_menu_destination.destroy()
+            if not stations:
+                return
             self.dropdown_var_destination.set("Select Station")
             self.dropdown_menu_destination = OptionMenu(parent, self.dropdown_var_destination, *stations)
             self.dropdown_menu_destination.config(bg="#e0e0e0", font=("Arial", 10), width=20)
-            self.dropdown_menu_destination.pack(anchor="w", padx=20)
+            self.dropdown_menu_destination.pack(anchor="sw", padx=20)
             self.destination_point = self.dropdown_var_destination
             self.dropdown_var_destination.trace("w", lambda *args: self.selected_destination_label.config(
-                text=f"Destination: {selected_line} - {self.dropdown_var_destination.get()}"
+                text=f"Destination: {self.selected_line_var.get()} - {self.dropdown_var_destination.get()}"
             ))
-
+        
+        
     def start_pan(self, event):
         self.map_canvas.config(cursor="fleur")
         self.pan_x = event.x
@@ -255,38 +300,101 @@ class TransitOptimizerApp:
             Radiobutton(choice_window, text=text, variable=self.choice_var, value=value,
                         font=("Arial", 10), bg="#ffffff", anchor="w").pack(fill="x", padx=20, pady=5)
 
-        tk.Button(choice_window, text="Confirm", command=lambda: [self.process_choice(), choice_window.destroy()],
+        tk.Button(choice_window, text="Confirm", command=lambda: [self.show_cards_option(self.choice_var.get()), choice_window.destroy()],
                   bg="#007acc", fg="white", font=("Arial", 10, "bold")).pack(pady=15)
 
-    def process_choice(self):
-        self.show_detailed_result()
+    def show_cards_option(self, option):
+        choice_window = Toplevel(self.root)
+        choice_window.title("Select Avaliable Cards Discount")
+        choice_window.geometry("300x380")
+        choice_window.configure(bg="#ffffff")
+        choice_window.resizable(False, False)
 
-    def show_detailed_result(self):
+        self.mrt_options = [
+            ("No Card", "normal"),
+            ("Student Card", "student"),
+            ("Children/Elder Card", "childold"),
+        ]
+        self.bts_options = [
+            ("No Card", "orange"),
+            ("Green (student) Card", "green"),
+            ("Purple (elder) Card", "purple"),
+        ]
+        mrt_var = tk.StringVar(value="normal")
+        bts_var = tk.StringVar(value="orange")
+        
+        # mrt options   
+        tk.Label(choice_window, text="MRT Card Options", font=("Arial", 12, "bold"),
+                 bg="#ffffff", fg="#333333").pack(pady=10)
+        for card, value in self.mrt_options:
+            Radiobutton(choice_window, text=card, variable=mrt_var, value=value,
+                        font=("Arial", 10), bg="#ffffff", anchor="w").pack(fill="x", padx=20, pady=5)
+
+        # bts options   
+        tk.Label(choice_window, text="BTS Card Options", font=("Arial", 12, "bold"),
+                 bg="#ffffff", fg="#333333").pack(pady=10)
+        for card, value in self.bts_options:
+            Radiobutton(choice_window, text=card, variable=bts_var, value=value,
+                        font=("Arial", 10), bg="#ffffff", anchor="w").pack(fill="x", padx=20, pady=5)
+
+
+        tk.Button(choice_window, text="Confirm", command=lambda: [self.show_detailed_result(option, bts_var.get(), mrt_var.get()), choice_window.destroy()],
+                  bg="#007acc", fg="white", font=("Arial", 10, "bold"), anchor='s').pack(pady=15)
+
+    def show_detailed_result(self, option, bts_card, mrt_card):
+        print(bts_card, mrt_card)
         result_window = Toplevel(self.root)
         result_window.title("Route Calculation Result")
-        result_window.geometry("400x300")
+        result_window.geometry("400x600")
         result_window.configure(bg="#ffffff")
-        result_window.resizable(False, False)
+        result_window.resizable(True, True)
 
-        route_steps = [
-            {"station": "Station 1", "line": "BTS"},
-            {"station": "Station 2", "line": "BTS"},
-            {"station": "Station A", "line": "MRT", "change_line": True},
-            {"station": "Station B", "line": "MRT"},
-            {"station": "Station X", "line": "Airport Rail Link", "change_line": True},
-            {"station": "Station Y", "line": "Airport Rail Link"},
+        start_code = self.lookUpTable.get_code_from_name(self.dropdown_var_start.get())
+        destination_code =self.lookUpTable.get_code_from_name(self.dropdown_var_destination.get())
+
+        if option == "least_cost":
+            result = self.prologTrainQuery.query_cheapest_path(start_code, destination_code, bts_card, mrt_card)
+        elif option == "least_station_changes":
+            result = self.prologTrainQuery.query_fastest_path(start_code, destination_code, bts_card, mrt_card)
+        elif option == "least_cost_and_changes":
+            result = self.prologTrainQuery.query_best_path(start_code, destination_code, bts_card, mrt_card)
+        path, length, fare, interchange = result
+        
+        print(result)
+        route_steps_real = [
+            {"station": self.lookUpTable.get_name_from_code(station_code), 
+             "line": self.lookUpTable.get_line_from_code(station_code), "change_line": self.lookUpTable.check_interchange(path, i)} for i, station_code in enumerate(path)
         ]
 
-        for step in route_steps:
-            if "change_line" in step:
+        # display card is some card is used
+        if bts_card != "orange":
+            for card, value in self.bts_options:
+                if value == bts_card:
+                    Label(result_window, text=f"BTS card used: {card}", font=("Arial", 12, "bold"),
+                        bg="#ffffff", fg="#027000").pack(anchor="w", padx=20, pady=10)
+                    
+        if mrt_card != "normal":
+            for card, value in self.mrt_options:
+                if value == mrt_card:
+                    Label(result_window, text=f"MRT card used: {card}", font=("Arial", 12, "bold"),
+                        bg="#ffffff", fg="#5e2c00").pack(anchor="w", padx=20, pady=10)
+
+
+
+        Label(result_window, text="Path:",
+                  font=("Arial", 10, "bold"), bg="#ffffff", fg="#444444").pack(anchor="w", padx=20, pady=2)
+        for step in route_steps_real:
+            if step["change_line"]:
                 Label(result_window, text=f"Change to {step['line']} Line", font=("Arial", 10, "italic"),
                       bg="#ffffff", fg="#666666").pack(anchor="w", padx=20, pady=5)
-            Label(result_window, text=f"Station: {step['station']} ({step['line']} Line)",
-                  font=("Arial", 10), bg="#ffffff", fg="#333333").pack(anchor="w", padx=20, pady=2)
+            Label(result_window, text=f"{step['line']} Line: {step['station']} ",
+                  font=("Arial", 10), bg="#ffffff", fg="#444444").pack(anchor="w", padx=20, pady=2)
 
-        total_cost = 120  # Mock total cost
-        Label(result_window, text=f"Total Cost: {total_cost} Baht", font=("Arial", 12, "bold"),
+        
+        Label(result_window, text=f"Total Cost: {fare} Baht", font=("Arial", 12, "bold"),
               bg="#ffffff", fg="#007acc").pack(anchor="w", padx=20, pady=15)
+        Label(result_window, text=f"Number of stations traversed: {length} stations", font=("Arial", 12, "bold"),
+              bg="#ffffff", fg="#007acc").pack(anchor="w", padx=20, pady=10)
 
 if __name__ == "__main__":
     root = tk.Tk()
