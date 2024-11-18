@@ -386,7 +386,7 @@ class TransitOptimizerApp:
         for step in route_steps_real:
             if step["change_line"]:
                 Label(result_window, text=f"Change to {step['line']} Line", font=("Arial", 10, "italic"),
-                      bg="#ffffff", fg="#666666").pack(anchor="w", padx=20, pady=5)
+                      bg="#ffffff", fg="#666666").pack(anchor="w", padx=40, pady=5)
             Label(result_window, text=f"{step['line']} Line: {step['station']} ",
                   font=("Arial", 10), bg="#ffffff", fg="#444444").pack(anchor="w", padx=20, pady=2)
 
