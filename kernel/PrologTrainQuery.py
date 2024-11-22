@@ -47,7 +47,7 @@ class PrologTrainQuery:
         @return: returns path, length, fare (in tuple)
         @raise keyError: raises an exception if wrong station name
         '''
-        query_str = f"fastest_path({station1}, {station2}, Path, Length, Fare, Interchange, {bts_card}, {mrt_card}), write(Path), write(' '), write(Length), write(' '), write(Fare), write(' '), write(Interchange), nl."
+        query_str = f"fastest_path({station1}, {station2}, Path, Length, Fare, {bts_card}, {mrt_card}), write(Path), write(' '), write(Length), write(' '), write(Fare), write(' '), write(1), nl."
 
         path, length, fare, interchange = self.__query(query_str)
 
@@ -66,8 +66,10 @@ class PrologTrainQuery:
         @return: returns path, length, fare (in tuple)
         @raise keyError: raises an exception if wrong station name
         '''
-        query_str = f"cheapest_path({station1}, {station2}, Path, Length, Fare, Interchange, {bts_card}, {mrt_card}), write(Path), write(' '), write(Length), write(' '), write(Fare), write(' '), write(Interchange), nl."
 
+        
+        query_str = f"cheapest_path({station1}, {station2}, Path, Length, Fare, {bts_card}, {mrt_card}), write(Path), write(' '), write(Length), write(' '), write(Fare), write(' '), write(1), nl."
+        print(query_str)
         path, length, fare, interchange = self.__query(query_str)
 
         if path:
@@ -86,7 +88,7 @@ class PrologTrainQuery:
         @return: returns path, length, fare (in tuple)
         @raise keyError: raises an exception if wrong station name
         '''
-        query_str = f"best_path({station1}, {station2}, Path, Length, Fare, Interchange, {bts_card}, {mrt_card}), write(Path), write(' '), write(Length), write(' '), write(Fare), write(' '), write(Interchange), nl."
+        query_str = f"best_path({station1}, {station2}, Path, Length, Fare, {bts_card}, {mrt_card}), write(Path), write(' '), write(Length), write(' '), write(Fare), write(' '), write(1), nl."
 
         
         path, length, fare, interchange = self.__query(query_str)

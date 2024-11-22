@@ -2,6 +2,7 @@
 
 import sys
 import os
+import webbrowser
 
 # Add the project root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -11,6 +12,7 @@ from tkinter import Canvas, OptionMenu, StringVar, Toplevel, messagebox, Radiobu
 from PIL import Image, ImageTk
 from kernel.LookUpTable import LookUpTable
 from kernel.PrologTrainQuery import PrologTrainQuery    
+from kernel.GmapsBrowser import GmapsBrowser
 
 class TransitOptimizerApp:
     def __init__(self, root):
@@ -20,7 +22,10 @@ class TransitOptimizerApp:
         self.root.configure(bg="#ffffff")  # Set background color for the main window
         self.lookUpTable = LookUpTable()
         self.prologTrainQuery = PrologTrainQuery() 
+        self.gmapsBrowser = GmapsBrowser(self.lookUpTable)
+
         self.prologTrainQuery.set_consult_file("./backend/train_sys_win_age.pl")
+        
 
         # Menu bar
         menu_bar = tk.Menu(root)
@@ -342,7 +347,7 @@ class TransitOptimizerApp:
 
         tk.Button(choice_window, text="Confirm", command=lambda: [self.show_detailed_result(option, bts_var.get(), mrt_var.get()), choice_window.destroy()],
                   bg="#007acc", fg="white", font=("Arial", 10, "bold"), anchor='s').pack(pady=15)
-
+        
     def show_detailed_result(self, option, bts_card, mrt_card):
         print(bts_card, mrt_card)
         result_window = Toplevel(self.root)
@@ -382,8 +387,8 @@ class TransitOptimizerApp:
                         bg="#ffffff", fg="#5e2c00").pack(anchor="w", padx=20, pady=10)
 
 
-
-        Label(result_window, text="Path:",
+        
+        Label(result_window, text=f"Path ({self.choice_var.get().replace("_", " ").capitalize()}):",
                   font=("Arial", 10, "bold"), bg="#ffffff", fg="#444444").pack(anchor="w", padx=20, pady=2)
         for step in route_steps_real:
             if step["change_line"]:
@@ -397,6 +402,11 @@ class TransitOptimizerApp:
               bg="#ffffff", fg="#007acc").pack(anchor="w", padx=20, pady=15)
         Label(result_window, text=f"Number of stations traversed: {length} stations", font=("Arial", 12, "bold"),
               bg="#ffffff", fg="#007acc").pack(anchor="w", padx=20, pady=10)
+        
+        tk.Button(result_window, text="Open in browser", 
+                  command=lambda: [GmapsBrowser(self.lookUpTable).start(path)],
+                  bg="#007acc", fg="white", font=("Arial", 10, "bold"), anchor='s').pack(pady=15)
+        
 
 if __name__ == "__main__":
     root = tk.Tk()

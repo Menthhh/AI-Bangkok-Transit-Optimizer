@@ -1,3 +1,5 @@
+import webbrowser
+
 class LookUpTable:
     '''
     converts station actual name into station code name (or vice versa)
@@ -227,6 +229,12 @@ class LookUpTable:
         '''
         return self.getLookUpTable()[code]
     
+    def get_name_from_codes_list(self, codes: list[str]) -> list[str]:
+        names = []
+        for code in codes:
+            names.append(self.get_name_from_code(code))
+        return names
+    
     def get_code_from_name(self, name: str) -> str:
         '''
         gets station code from station name
@@ -268,34 +276,53 @@ class LookUpTable:
     
     def get_line_from_code(self, code: str) -> str:
         if code.startswith("n") or code.startswith("cen_lg") or code.startswith("e"):
-            return "Light Green"
+            return "BTS Light Green"
         elif code.startswith("w") or code.startswith("cen_dg") or code.startswith("s"):
-            return "Dark Green"
+            return "BTS Dark Green"
         elif code.startswith("g"):
-            return "Gold"
+            return "BTS Gold"
         elif code.startswith("bl"):
-            return "Blue"
+            return "MRT Blue"
         elif code.startswith("pp"):
-            return "Purple"
+            return "MRT Purple"
         elif code.startswith("yl"):
-            return "Yellow"
+            return "MRT Yellow"
         elif code.startswith("pk") or code.startswith("mt"):
-            return "Pink"
+            return "MRT Pink"
         elif code.startswith("a"):
             return "Airport Rail Link"
         elif code.startswith("rn"):
-            return "Dark Red"
+            return "SRT Dark Red"
         elif code.startswith("rw"):
-            return "Light Red"
+            return "SRT Light Red"
     
     def check_interchange(self, path, index):
         if index == 0:
             return False
         current = self.get_line_from_code(path[index])
         previous = self.get_line_from_code(path[index - 1])
-        print(current, previous)
 
         if current != previous:
             return True
         else:
             return False
+    
+    def open_google_maps_with_stops(self, path):
+        base_url = "https://www.google.com/maps/dir/?api=1"
+        travel_mode = "transit"
+        transit_mode = "rail"
+        action = "navigate"  # Forces navigation recalculation
+        
+        path_names = self.get_name_from_codes_list(path)
+        start = path_names[0] + " station"
+        destination = path_names[-1] + " station"
+        url = f"{base_url}&origin={start}&destination={destination}&travelmode={travel_mode}&transit_mode={transit_mode}&dir_action={action}"
+        if len(path_names) > 2:
+            stops = []
+            for path_name in path_names:
+                stops.append(path_name + " station")
+            waypoints = "|".join(stops[1:-1])
+            url += f"&waypoints={waypoints}"
+        
+        print(url)
+        webbrowser.open(url)
