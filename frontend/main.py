@@ -18,7 +18,7 @@ class TransitOptimizerApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Bangkok Transit Optimizer")
-        self.root.geometry("850x650")
+        self.root.geometry("1920x1080")
         self.root.configure(bg="#ffffff")  # Set background color for the main window
         self.lookUpTable = LookUpTable()
         self.prologTrainQuery = PrologTrainQuery() 
@@ -58,6 +58,9 @@ class TransitOptimizerApp:
         self.selected_destination_label = Label(self.panel_frame, text="Destination: Not selected", font=("Arial", 10), bg="#ffffff", fg="#333333")
         self.selected_destination_label.pack(pady=5)
 
+        self.selected_line_var = tk.StringVar()
+        self.selected_line_var.set(None)
+
         # Button frame for positioning
         button_frame = Frame(self.panel_frame, bg="#ffffff")
         button_frame.pack(pady=5)
@@ -86,21 +89,21 @@ class TransitOptimizerApp:
         calc_button.pack(pady=15)
 
         # Map Canvas for displaying the map image with zoom and pan
-        self.map_canvas = Canvas(root, width=700, height=400, bg="#f2f2f2", highlightthickness=2, highlightbackground="#cccccc")
-        self.map_canvas.pack(fill="both", expand=True, padx=20, pady=10)
+        # self.map_canvas = Canvas(root, width=700, height=400, bg="#f2f2f2", highlightthickness=2, highlightbackground="#cccccc")
+        # self.map_canvas.pack(fill="both", expand=True, padx=20, pady=10)
 
-        # Load and display the map image
-        # map_image = Image.open(r"C:\Users\Acer\Documents\AI-Bangkok-Transit-Optimizer\frontend\images\map.jpg")
-        map_image = Image.open("frontend\images\map.jpg")
-        self.original_image = map_image
-        self.map_image_tk = ImageTk.PhotoImage(map_image)
-        self.map_image_id = self.map_canvas.create_image(0, 0, image=self.map_image_tk, anchor="nw")
+        # # Load and display the map image
+        # # map_image = Image.open(r"C:\Users\Acer\Documents\AI-Bangkok-Transit-Optimizer\frontend\images\map.jpg")
+        # map_image = Image.open("frontend\images\map.jpg")
+        # self.original_image = map_image
+        # self.map_image_tk = ImageTk.PhotoImage(map_image)
+        # self.map_image_id = self.map_canvas.create_image(0, 0, image=self.map_image_tk, anchor="nw")
 
-        # Variables for panning and zooming
-        self.map_canvas.bind("<ButtonPress-1>", self.start_pan)
-        self.map_canvas.bind("<B1-Motion>", self.pan_image)
-        self.map_canvas.bind("<ButtonRelease-1>", self.end_pan)
-        self.map_canvas.bind("<MouseWheel>", self.zoom)
+        # # Variables for panning and zooming
+        # self.map_canvas.bind("<ButtonPress-1>", self.start_pan)
+        # self.map_canvas.bind("<B1-Motion>", self.pan_image)
+        # self.map_canvas.bind("<ButtonRelease-1>", self.end_pan)
+        # self.map_canvas.bind("<MouseWheel>", self.zoom)
 
         # Track the zoom level and pan offsets
         self.zoom_level = 1.0
@@ -115,6 +118,130 @@ class TransitOptimizerApp:
 
         # Initialize choice variable for route calculation
         self.choice_var = tk.StringVar(value="least_cost")  # Default choice
+
+        #canvas
+        # Canvas frame with scrollbars
+        self.canvas_frame = Frame(root)
+        self.canvas_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Scrollable Canvas
+        self.map_canvas = Canvas(self.canvas_frame, bg="#f0f0f0", highlightthickness=1, highlightbackground="#cccccc")
+        self.map_canvas.pack(side="left", fill="both", expand=True)
+
+        self.h_scrollbar = tk.Scrollbar(self.canvas_frame, orient="horizontal", command=self.map_canvas.xview)
+        self.h_scrollbar.pack(side="bottom", fill="x")
+        self.v_scrollbar = tk.Scrollbar(self.canvas_frame, orient="vertical", command=self.map_canvas.yview)
+        self.v_scrollbar.pack(side="right", fill="y")
+
+        self.map_canvas.config(xscrollcommand=self.h_scrollbar.set, yscrollcommand=self.v_scrollbar.set)
+
+        # Load map image
+        self.map_image = Image.open("./frontend/images/map.jpg")  # Replace with your map image path
+        self.map_image_tk = ImageTk.PhotoImage(self.map_image)
+
+        # Create scrollable region
+        self.map_width, self.map_height = self.map_image.size
+        self.map_canvas.create_image(0, 0, image=self.map_image_tk, anchor="nw")
+        self.map_canvas.config(scrollregion=(0, 0, self.map_width, self.map_height))
+
+        # Draw station nodes (example data)
+        # self.stations = {
+        #     "Station A": {"coords": (1310, 465), "line": "Light Green"},
+        #     "Station B": {"coords": (1210, 635), "line": "Light Green"},
+        #     "Station C": {"coords": (1210, 565), "line": "Dark Green"},
+        #     "Station D": {"coords": (400, 300), "line": "Blue"},
+        #     "n24": (1310, 465),
+        #     "n23": (1210 ,565),
+        #     "n22": (1210, 635),
+        #     "n21": (1210, 705),
+        #     "n20": (1210, 775),
+        #     "n19": (1210, 845),
+        #     "n18": (1210, 915),
+        #     "n17": (1210, 985),
+        # }
+
+        color_match = {
+            "BTS Light Green": "lightgreen",
+            "BTS Dark Green": "darkgreen",
+            "BTS Gold": "gold",
+            "MRT Blue": "blue",
+            "MRT Purple": "purple",
+            "MRT Yellow": "yellow",
+            "MRT Pink": "pink",
+            "Airport Rail Link": "brown",
+            "SRT Dark Red": "darkred",
+            "SRT Light Red": "red",
+        }
+        self.stations = self.lookUpTable.get_canvas_info()
+        self.station_items = {}
+        for station_code, data in self.stations.items():
+            x, y = data["coords"]
+            item = self.map_canvas.create_oval(x-10, y-10, x+10, y+10, fill=color_match[self.lookUpTable.get_line_from_code(station_code)], outline="black", tags="station", )
+            self.station_items[item] = (station_code, self.lookUpTable.get_name_from_code(station_code))
+            print(station_code)
+
+        # Bind scroll and click events
+        self.map_canvas.bind("<MouseWheel>", self.scroll_with_mouse)
+        self.map_canvas.bind("<Button-1>", self.on_station_click)
+
+    def scroll_with_mouse(self, event):
+        if event.state & 0x1:  # Shift key for horizontal scroll
+            self.map_canvas.xview_scroll(-1 * int(event.delta / 120), "units")
+        else:  # Default vertical scroll
+            self.map_canvas.yview_scroll(-1 * int(event.delta / 120), "units")
+
+    def on_station_click(self, event):
+        # Adjust click position for scrolling
+        canvas_x = self.map_canvas.canvasx(event.x)
+        canvas_y = self.map_canvas.canvasy(event.y)
+        clicked_item = self.map_canvas.find_closest(canvas_x, canvas_y)[0]
+
+        station_code, station_name = self.station_items.get(clicked_item)
+        if station_name:
+            self.show_station_selection_dialog(station_code, station_name)
+
+    def show_station_selection_dialog(self, station_code, station_name):
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Select Station Role")
+        dialog.geometry("300x150")
+        dialog.configure(bg="#ffffff")
+
+        label = tk.Label(dialog, text=f"Set {station_name} as:", font=("Arial", 12), bg="#ffffff")
+        label.pack(pady=20)
+
+        # Buttons for Start and Destination
+        start_button = tk.Button(dialog, text="Start", command=lambda: self.set_station("Start", station_code, station_name, dialog),
+                                  bg="#4CAF50", fg="white", font=("Arial", 10), width=10)
+        start_button.pack(side="left", padx=20)
+
+        destination_button = tk.Button(dialog, text="Destination", command=lambda: self.set_station("Destination", station_code, station_name, dialog),
+                                        bg="#007ACC", fg="white", font=("Arial", 10), width=10)
+        destination_button.pack(side="right", padx=20)
+
+    def set_station(self, role, station_code, station_name, dialog):
+        if role == "Start":
+            self.dropdown_var_start.set(station_name)
+            self.selected_line_var.set(self.lookUpTable.get_line_from_code(station_code))
+
+            self.selected_start_label.config(text=f"Start: {self.selected_line_var.get()} - {self.dropdown_var_start.get()}")
+        elif role == "Destination":
+            self.dropdown_var_destination.set(station_name)
+            self.selected_line_var.set(self.lookUpTable.get_line_from_code(station_code))
+
+            self.selected_destination_label.config(text=f"Destination: {self.selected_line_var.get()} - {self.dropdown_var_destination.get()}")
+
+        dialog.destroy()  # Close the dialog
+
+    def confirm_route(self):
+        start = self.start_label.cget("text").replace("Start Point: ", "")
+        destination = self.destination_label.cget("text").replace("Destination: ", "")
+
+        if start == "Not selected" or destination == "Not selected":
+            messagebox.showwarning("Incomplete Selection", "Please select both a start and destination station.")
+            return
+
+        messagebox.showinfo("Route Confirmed", f"Route set from {start} to {destination}")
+
 
     def toggle_panel(self):
         """Toggles the visibility of the main panel."""
@@ -151,9 +278,7 @@ class TransitOptimizerApp:
             "Red Line": []
         }
 
-        self.selected_line_var = tk.StringVar()
-        self.selected_line_var.set(None)
-
+        
         for line, stations in lines.items():
             radio_button = tk.Radiobutton(
                 transit_window,
@@ -300,7 +425,6 @@ class TransitOptimizerApp:
         options = [
             ("Least Cost", "least_cost"),
             ("Least Station Changes", "least_station_changes"),
-            ("Least Cost and Station Changes", "least_cost_and_changes")
         ]
 
         for text, value in options:
@@ -363,8 +487,8 @@ class TransitOptimizerApp:
             result = self.prologTrainQuery.query_cheapest_path(start_code, destination_code, bts_card, mrt_card)
         elif option == "least_station_changes":
             result = self.prologTrainQuery.query_fastest_path(start_code, destination_code, bts_card, mrt_card)
-        elif option == "least_cost_and_changes":
-            result = self.prologTrainQuery.query_best_path(start_code, destination_code, bts_card, mrt_card)
+        # elif option == "least_cost_and_changes":
+            # result = self.prologTrainQuery.query_best_path(start_code, destination_code, bts_card, mrt_card)
         path, length, fare, interchange = result
         
         print(result)
